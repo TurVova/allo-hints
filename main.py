@@ -157,7 +157,7 @@ class Hints:
 if __name__ == '__main__':
     t = datetime.datetime.now()
     print("START")
-    hint = Hints(max_request=250)
+    hint = Hints()
     loop = asyncio.get_event_loop()
     try:
         loop.run_until_complete(hint.run())
