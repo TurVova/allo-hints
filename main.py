@@ -9,6 +9,10 @@ from typing import List, Set
 import requests_async as requests
 
 
+class TooManyRequests(Exception):
+    """Too many requests"""
+
+
 class DB:
     def __init__(self, filename: str = 'allo_hint.db'):
         self.file_db: str = filename
@@ -46,8 +50,8 @@ class Hints:
     hint_list_from_db: List = []
     c = 0
 
-    def __init__(self):
-        self.end: int = 100
+    def __init__(self, max_request=100):
+        self.end: int = max_request
         self.file_chars_name: str = 'chars_file.txt'
         self.db_obj = DB()
 
@@ -114,10 +118,15 @@ class Hints:
             {'q': char},
             timeout=3
         )
+        if post.status_code == 429:
+            raise TooManyRequests
         try:
             response: List[str] = (post.json()).get('query')
         except AttributeError:
             pass
+        except TooManyRequests:
+            print('Too Many Requests')
+            self.char_list.append(char)
         else:
             if response:
                 self.hint_list.extend(response)
