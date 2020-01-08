@@ -15,7 +15,6 @@ from exceptions import TooManyRequests
 
 def max_requests_parse()-> Union[int, None]:
     max_requests_parser: argparse.ArgumentParser = argparse.ArgumentParser()
-    print(type(max_requests_parser))
     max_requests_parser.add_argument(
         '--max_requests', action="store", type=int,
         help='Maximum number of requests at a time.'
