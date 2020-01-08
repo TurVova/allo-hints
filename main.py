@@ -1,4 +1,5 @@
 import _io
+import argparse
 import asyncio
 import datetime
 import os
@@ -10,6 +11,16 @@ import requests_async as requests
 from requests.exceptions import ConnectTimeout
 
 from exceptions import TooManyRequests
+
+
+def max_requests_parse()-> Union[int, None]:
+    max_requests_parser: argparse.ArgumentParser = argparse.ArgumentParser()
+    print(type(max_requests_parser))
+    max_requests_parser.add_argument(
+        '--max_requests', action="store", type=int,
+        help='Maximum number of requests at a time.'
+    )
+    return max_requests_parser.parse_args().max_requests
 
 
 class DB:
@@ -49,8 +60,8 @@ class Hints:
     hint_list_from_db: List = []
     c = 0
 
-    def __init__(self, max_request=100):
-        self.end: int = max_request
+    def __init__(self, max_requests=100):
+        self.end: int = max_requests
         self.file_chars_name: str = 'chars_file.txt'
         self.db_obj = DB()
 
@@ -157,7 +168,11 @@ class Hints:
 if __name__ == '__main__':
     t = datetime.datetime.now()
     print("START")
-    hint = Hints()
+    max_requests: Union[int, None] = max_requests_parse()
+    if max_requests:
+        hint = Hints(max_requests=max_requests)
+    else:
+        hint = Hints()
     loop = asyncio.get_event_loop()
     try:
         loop.run_until_complete(hint.run())
