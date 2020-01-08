@@ -4,13 +4,12 @@ import datetime
 import os
 import sqlite3
 import string
-from typing import List, Set
+from typing import List, Set, Union
 
 import requests_async as requests
+from requests.exceptions import ConnectTimeout
 
-
-class TooManyRequests(Exception):
-    """Too many requests"""
+from exceptions import TooManyRequests
 
 
 class DB:
@@ -34,7 +33,7 @@ class DB:
 
         return self.__fetchall(cursor)
 
-    def insertmany(self, table: str, column: str, data: Set[str] or List[str]):
+    def insertmany(self, table: str, column: str, data: Union[Set[str], List[str]]):
         param: List = [
             (value,) for value in data
         ]
@@ -113,27 +112,30 @@ class Hints:
         self.file_reader(','.join(self.char_list))
 
     async def req(self, char: str):
-        post: requests.models.Response = await requests.post(
-            self.url,
-            {'q': char},
-            timeout=3
-        )
-        if post.status_code == 429:
-            raise TooManyRequests
         try:
+            post: requests.models.Response = await requests.post(
+                self.url,
+                {'q': char},
+                timeout=3
+            )
+            if post.status_code == 429:
+                raise TooManyRequests
             response: List[str] = (post.json()).get('query')
-        except AttributeError:
-            pass
         except TooManyRequests:
             print('Too Many Requests')
             self.char_list.append(char)
+        except ConnectTimeout:
+            print('Connect Timeout')
+            self.char_list.append(char)
+        except AttributeError:
+            pass
         else:
             if response:
                 self.hint_list.extend(response)
         finally:
             self.char_list.remove(char)
 
-    async def collect_tusks(self):
+    async def collect_tasks(self):
         self.tasks = asyncio.gather(
             *[
                 self.req(char)
@@ -146,7 +148,7 @@ class Hints:
     async def run(self):
         await self.connect()
         while self.char_list:
-            await self.collect_tusks()
+            await self.collect_tasks()
             self.c += 1
             print(self.c)
         await self.disconnect()
@@ -155,7 +157,7 @@ class Hints:
 if __name__ == '__main__':
     t = datetime.datetime.now()
     print("START")
-    hint = Hints()
+    hint = Hints(max_request=250)
     loop = asyncio.get_event_loop()
     try:
         loop.run_until_complete(hint.run())
